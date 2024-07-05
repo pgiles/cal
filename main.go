@@ -1,12 +1,9 @@
 package main
 
 import (
-	cal "github.com/pgiles/cal/internal"
-	"time"
+	"github.com/pgiles/cal/example"
 )
 
 func main() {
-	c := cal.NewCalendar().AddMonth(time.February)
-	c.AddMonth(time.March)
-	c.Print()
+	example.ApplyCommits()
 }
