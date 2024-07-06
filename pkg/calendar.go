@@ -1,14 +1,15 @@
-package internal
+package pkg
 
 import (
 	"fmt"
 	"github.com/fatih/color"
+	"sort"
 	"strings"
 	"time"
 )
 
 type Calendar struct {
-	grid map[string][]DayMeta
+	grid map[time.Month][]DayMeta
 	year int
 }
 
@@ -22,16 +23,24 @@ type DayMeta struct {
 
 func NewCalendar() *Calendar {
 	return &Calendar{
-		grid: map[string][]DayMeta{},
+		grid: map[time.Month][]DayMeta{},
 		year: time.Now().Year(),
 	}
 }
 
+func (c *Calendar) SetAndAddYear(year int) *Calendar {
+	c.year = year
+	for i := time.January; i <= time.December; i++ {
+		c.AddMonth(i)
+	}
+	return c
+}
+
 func (c *Calendar) AddMonth(month time.Month) *Calendar {
 	//build a grid
-	days := daysIn(month, c.year)
+	days := daysInMonth(month, c.year)
 	for d := 0; d < days; d++ {
-		c.grid[month.String()] = append(c.grid[month.String()], DayMeta{
+		c.grid[month] = append(c.grid[month], DayMeta{
 			num:     d + 1,
 			name:    Date(c.year, month, d+1).Weekday().String(),
 			date:    Date(c.year, month, d+1),
@@ -44,21 +53,28 @@ func (c *Calendar) AddMonth(month time.Month) *Calendar {
 
 func (c *Calendar) Print() {
 	g := color.New(color.FgGreen)
-	for m := range c.grid {
-		t := Date(c.year, monthNameToMonth(m), 1)
-		fmt.Print(t.Format("Jan"), ": ")
+
+	totalWorkedDays := 0
+	for _, k := range sortedKeys(c.grid) {
+		m := time.Month(k)
+		fmt.Print(Date(c.year, m, 1).Format("Jan"), ": ") // Print month abbreviation to start a row
+		workedDays := 0
 		for dayMeta := 0; dayMeta < len(c.grid[m]); dayMeta++ {
 			if strings.HasPrefix(c.grid[m][dayMeta].name, "S") {
 				continue
 			}
 			if c.grid[m][dayMeta].worked {
+				workedDays++
 				_, _ = g.Printf("%s %d,", c.grid[m][dayMeta].name[0:2], c.grid[m][dayMeta].num)
 			} else {
 				fmt.Printf("%s %d,", c.grid[m][dayMeta].name[0:2], c.grid[m][dayMeta].num)
 			}
 		}
-		fmt.Println()
+		totalWorkedDays += workedDays
+		percentage := float64(workedDays) / float64(len(c.grid[m])) * 100
+		fmt.Printf(" days worked: %.2f%%\n", percentage)
 	}
+	fmt.Println("total days worked:", totalWorkedDays)
 }
 
 func (c *Calendar) AddWorkingDay(date time.Time) {
@@ -72,20 +88,6 @@ func (c *Calendar) AddWorkingDay(date time.Time) {
 	}
 }
 
-// daysIn returns the number of days in a month for a given year.
-func daysIn(m time.Month, year int) int {
-	return time.Date(year, m+1, 0, 0, 0, 0, 0, time.UTC).Day()
-}
-
-func monthNameToMonth(name string) time.Month {
-	for i := time.January; i <= time.December; i++ {
-		if i.String() == name {
-			return i
-		}
-	}
-	return 0
-}
-
 func Date(year int, month time.Month, day int) time.Time {
 	return time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
 }
@@ -95,4 +97,18 @@ func EqualDate(t1, t2 time.Time) bool {
 	y1, m1, d1 := t1.Date()
 	y2, m2, d2 := t2.Date()
 	return y1 == y2 && m1 == m2 && d1 == d2
+}
+
+// daysInMonth returns the number of days in a month for a given year.
+func daysInMonth(m time.Month, year int) int {
+	return time.Date(year, m+1, 0, 0, 0, 0, 0, time.UTC).Day()
+}
+
+func sortedKeys(m map[time.Month][]DayMeta) []int {
+	keys := make([]int, 0, len(m))
+	for k := range m {
+		keys = append(keys, int(k))
+	}
+	sort.Ints(keys)
+	return keys
 }
