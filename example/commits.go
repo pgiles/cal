@@ -2,7 +2,7 @@ package example
 
 import (
 	"encoding/json"
-	cal "github.com/pgiles/cal/internal"
+	cal "github.com/pgiles/cal/pkg"
 	"os"
 	"time"
 )
