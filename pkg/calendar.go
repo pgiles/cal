@@ -19,6 +19,7 @@ type DayMeta struct {
 	date    time.Time
 	working bool
 	worked  bool
+	dayOff  bool
 }
 
 func NewCalendar() *Calendar {
@@ -52,7 +53,8 @@ func (c *Calendar) AddMonth(month time.Month) *Calendar {
 }
 
 func (c *Calendar) Print() {
-	g := color.New(color.FgGreen)
+	g := color.New(color.FgGreen) // color for worked days
+	r := color.New(color.FgRed)   // color for days off
 
 	totalWorkedDays := 0
 	for _, k := range sortedKeys(c.grid) {
@@ -61,11 +63,14 @@ func (c *Calendar) Print() {
 		workedDays := 0
 		for dayMeta := 0; dayMeta < len(c.grid[m]); dayMeta++ {
 			if strings.HasPrefix(c.grid[m][dayMeta].name, "S") {
+				// Work weeks; who works Saturday or Sunday?
 				continue
 			}
 			if c.grid[m][dayMeta].worked {
 				workedDays++
 				_, _ = g.Printf("%s %d,", c.grid[m][dayMeta].name[0:2], c.grid[m][dayMeta].num)
+			} else if c.grid[m][dayMeta].dayOff {
+				_, _ = r.Printf("%s %d,", c.grid[m][dayMeta].name[0:2], c.grid[m][dayMeta].num)
 			} else {
 				fmt.Printf("%s %d,", c.grid[m][dayMeta].name[0:2], c.grid[m][dayMeta].num)
 			}
@@ -83,6 +88,17 @@ func (c *Calendar) AddWorkingDay(date time.Time) {
 			if EqualDate(date, c.grid[m][dayMeta].date) {
 				fmt.Printf("added %v as a working day\n", date)
 				c.grid[m][dayMeta].worked = true
+			}
+		}
+	}
+}
+
+func (c *Calendar) AddDayOff(date time.Time) {
+	for m := range c.grid {
+		for dayMeta := 0; dayMeta < len(c.grid[m]); dayMeta++ {
+			if EqualDate(date, c.grid[m][dayMeta].date) {
+				fmt.Printf("added %v as a day off\n", date)
+				c.grid[m][dayMeta].dayOff = true
 			}
 		}
 	}
