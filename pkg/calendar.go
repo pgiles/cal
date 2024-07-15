@@ -19,6 +19,7 @@ type DayMeta struct {
 	date    time.Time
 	working bool
 	worked  bool
+	dayOff  bool
 }
 
 func NewCalendar() *Calendar {
@@ -52,26 +53,34 @@ func (c *Calendar) AddMonth(month time.Month) *Calendar {
 }
 
 func (c *Calendar) Print() {
-	g := color.New(color.FgGreen)
+	g := color.New(color.FgGreen) // color for worked days
+	r := color.New(color.FgRed)   // color for days off
 
 	totalWorkedDays := 0
 	for _, k := range sortedKeys(c.grid) {
 		m := time.Month(k)
 		fmt.Print(Date(c.year, m, 1).Format("Jan"), ": ") // Print month abbreviation to start a row
 		workedDays := 0
+		daysOff := 0
 		for dayMeta := 0; dayMeta < len(c.grid[m]); dayMeta++ {
 			if strings.HasPrefix(c.grid[m][dayMeta].name, "S") {
+				// Work weeks; who works Saturday or Sunday?
 				continue
 			}
+			c.grid[m][dayMeta].working = true
 			if c.grid[m][dayMeta].worked {
 				workedDays++
 				_, _ = g.Printf("%s %d,", c.grid[m][dayMeta].name[0:2], c.grid[m][dayMeta].num)
+			} else if c.grid[m][dayMeta].dayOff {
+				daysOff++
+				_, _ = r.Printf("%s %d,", c.grid[m][dayMeta].name[0:2], c.grid[m][dayMeta].num)
 			} else {
 				fmt.Printf("%s %d,", c.grid[m][dayMeta].name[0:2], c.grid[m][dayMeta].num)
 			}
 		}
 		totalWorkedDays += workedDays
-		percentage := float64(workedDays) / float64(len(c.grid[m])) * 100
+		workingDays := c.calculateWorkingDays(m)
+		percentage := float64(workedDays) / float64(workingDays-daysOff) * 100
 		fmt.Printf(" days worked: %.2f%%\n", percentage)
 	}
 	fmt.Println("total days worked:", totalWorkedDays)
@@ -83,6 +92,17 @@ func (c *Calendar) AddWorkingDay(date time.Time) {
 			if EqualDate(date, c.grid[m][dayMeta].date) {
 				fmt.Printf("added %v as a working day\n", date)
 				c.grid[m][dayMeta].worked = true
+			}
+		}
+	}
+}
+
+func (c *Calendar) AddDayOff(date time.Time) {
+	for m := range c.grid {
+		for dayMeta := 0; dayMeta < len(c.grid[m]); dayMeta++ {
+			if EqualDate(date, c.grid[m][dayMeta].date) {
+				fmt.Printf("added %v as a day off\n", date)
+				c.grid[m][dayMeta].dayOff = true
 			}
 		}
 	}
@@ -111,4 +131,14 @@ func sortedKeys(m map[time.Month][]DayMeta) []int {
 	}
 	sort.Ints(keys)
 	return keys
+}
+
+func (c *Calendar) calculateWorkingDays(m time.Month) int {
+	result := 0
+	for dayMeta := 0; dayMeta < len(c.grid[m]); dayMeta++ {
+		if c.grid[m][dayMeta].working {
+			result = result + 1
+		}
+	}
+	return result
 }

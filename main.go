@@ -6,4 +6,6 @@ import (
 
 func main() {
 	example.ApplyCommits()
+
+	example.ApplyCommitsAndPTO()
 }
